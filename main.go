@@ -63,12 +63,10 @@ func (s ParcelService) PrintClientParcels(client int) error {
 	}
 
 	fmt.Printf("Посылки клиента №%d:\n", client)
-	for i, parcel := range parcels {
+	for _, parcel := range parcels {
 		fmt.Printf("Посылка № %d на адрес %s от клиента с идентификатором %d зарегистрирована %s, статус %s\n",
 			parcel.Number, parcel.Address, parcel.Client, parcel.CreatedAt, parcel.Status)
-		if i < len(parcels)-1 {
-			fmt.Println()
-		}
+		fmt.Println()
 	}
 	return nil
 }

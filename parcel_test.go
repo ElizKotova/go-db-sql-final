@@ -111,34 +111,43 @@ func TestSetStatus(t *testing.T) {
 
 // TestGetByClient тестирует получение списка посылок клиента.
 func TestGetByClient(t *testing.T) {
+	// Подключение к базе данных.
 	db, err := sql.Open("sqlite", "tracker.db")
 	require.NoError(t, err)
 	defer db.Close()
 
-	store := NewParcelStore(db)
-	cl := int(randSource.Int63())
+	// Создание тестовых посылок.
+	parcels := []Parcel{
+		getTestParcel(),
+		getTestParcel(),
+		getTestParcel(),
+	}
+	parcelMap := map[int]Parcel{}
 
-	// Добавление посылок.
-	p1 := getTestParcel()
-	p1.Client = cl
-	id1, err := store.Add(p1)
+	// Присваиваем всем посылкам одинаковый идентификатор клиента.
+	client := rand.Intn(10_000_000)
+	for i := range parcels {
+		parcels[i].Client = client
+	}
+
+	// Добавление посылок в базу данных.
+	for i := 0; i < len(parcels); i++ {
+		id, err := NewParcelStore(db).Add(parcels[i])
+		require.NoError(t, err)
+		require.NotZero(t, id)
+		parcels[i].Number = id
+		parcelMap[id] = parcels[i]
+	}
+
+	// Получение списка посылок клиента.
+	got, err := NewParcelStore(db).GetByClient(client)
 	require.NoError(t, err)
-	require.NotZero(t, id1)
-	p1.Number = id1
+	require.Len(t, got, len(parcels))
 
-	p2 := getTestParcel()
-	p2.Client = cl
-	id2, err := store.Add(p2)
-	require.NoError(t, err)
-	require.NotZero(t, id2)
-	p2.Number = id2
-
-	// Получение списка посылок.
-	ps, err := store.GetByClient(cl)
-	require.NoError(t, err)
-	require.Len(t, ps, 2)
-
-	// Проверка содержимого списка.
-	require.Contains(t, ps, p1)
-	require.Contains(t, ps, p2)
+	// Проверка содержимого списка по идентификатору посылки.
+	for _, p := range got {
+		want, ok := parcelMap[p.Number]
+		require.True(t, ok)
+		require.Equal(t, want, p)
+	}
 }
